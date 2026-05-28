@@ -11,7 +11,7 @@ const QUESTIONS = [
   {
     name: 'answer2',
     label: 'Question two',
-    prompt: 'Món gì anh ghét nhất?',
+    prompt: 'Trái cây gì anh ghét nhất?',
   },
 ];
 
@@ -77,7 +77,7 @@ function UnlockModal({ isOpen, onClose, onUnlocked }) {
         return;
       }
 
-      onUnlocked(result.message);
+      onUnlocked(result);
       setAnswers({ answer1: '', answer2: '' });
     } catch {
       setError('The secret lock could not be reached. Please try again in a moment.');
@@ -130,7 +130,7 @@ function UnlockModal({ isOpen, onClose, onUnlocked }) {
             </div>
 
             <p id={descriptionId} className="modal-copy">
-              Để mở được trang bí mật này, em cần trả lời đúng mấy câu hỏi này. Nếu mở không được thì nó sẽ được tiết lộ ở buổi gặp tiếp theo của mình.
+              Để mở được trang bí mật này, em cần trả lời đúng 2 câu hỏi dưới đây. Vì đây là trang bí mật anh gửi em nên câu hỏi sẽ xoay quanh anh nha!
             </p>
 
             <div className="question-stack">
@@ -157,7 +157,7 @@ function UnlockModal({ isOpen, onClose, onUnlocked }) {
                   {error}
                 </p>
               ) : (
-                <p className="form-note">Có thể viết hoa hoặc viết thường, miễn là đúng câu trả lời.</p>
+                <p className="form-note">Có thể viết hoa hoặc thường, không có dấu nha em</p>
               )}
 
               <button className="submit-button" type="submit" disabled={isSubmitting}>
