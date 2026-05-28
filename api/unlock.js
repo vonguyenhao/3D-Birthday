@@ -1,3 +1,5 @@
+import { createUnlockToken } from './_unlockToken.js';
+
 const normalizeAnswer = (value) => String(value ?? '').trim().toLocaleLowerCase();
 
 const timingSafeEqual = (left, right) => {
@@ -50,10 +52,18 @@ export default function handler(request, response) {
       });
     }
 
-    return response.status(200).json({
+    const payload = {
       success: true,
       message: secretMessage,
-    });
+    };
+    const unlockToken = createUnlockToken(process.env.UNLOCK_TOKEN_SECRET);
+
+    if (unlockToken) {
+      payload.unlockToken = unlockToken.token;
+      payload.unlockTokenExpiresAt = unlockToken.expiresAt;
+    }
+
+    return response.status(200).json(payload);
   } catch {
     return response.status(400).json({
       success: false,

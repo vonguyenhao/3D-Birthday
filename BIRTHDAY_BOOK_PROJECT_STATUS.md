@@ -7,8 +7,8 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 ## 2. Current Status
 
 - Overall status: Complete
-- Last updated timestamp: 2026-05-27 23:16 ACST
-- Current working state: Polishing pass completed. Visible Back/Next/Turn overlays and the writing/reply page have been removed. Natural page-click navigation and magical page effects are implemented.
+- Last updated timestamp: 2026-05-28 00:00 ACST
+- Current working state: Phase 2 foundation completed. Music source is configurable with a public Vite URL fallback, media files are protected by gitignore guardrails, and private image access has a future-ready token/API foundation without exposing private media.
 
 ## 3. Completed Work
 
@@ -29,6 +29,13 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 - [x] Secret message kept inside book pages
 - [x] Magical sparkle/light effects added
 - [x] README updated
+- [x] Phase 2 music strategy added
+- [x] YouTube documented as not recommended for primary background music
+- [x] `VITE_BACKGROUND_MUSIC_URL` public hosted MP3 option added
+- [x] Media `.gitignore` safety added
+- [x] Private image strategy documented
+- [x] Unlock token foundation added
+- [x] Future `/api/memory-images` endpoint added
 
 ## 4. Files Changed
 
@@ -44,6 +51,15 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 | `src/styles.css` | Removed writing and visible page-button CSS; kept compact memory hotspot styling. | Removes unused UI and visual clutter. |
 | `README.md` | Removed reply instructions and documented page-click navigation, music, images, env vars, and unlock testing. | Keeps documentation aligned with current UX. |
 | `BIRTHDAY_BOOK_PROJECT_STATUS.md` | Updated current redesign status, files changed, testing, and limitations. | Required progress tracking. |
+| `src/components/MusicControl.jsx` | Added `VITE_BACKGROUND_MUSIC_URL` support with local MP3 fallback. | Allows hosted public MP3 music without committing audio. |
+| `api/_unlockToken.js` | Added short-lived HMAC unlock token helper. | Foundation for future private memory image access without a database. |
+| `api/unlock.js` | Optionally returns `unlockToken` when `UNLOCK_TOKEN_SECRET` is configured. | Keeps normal unlock working while enabling future private image APIs. |
+| `api/memory-images.js` | Added token-protected placeholder endpoint returning empty/not-configured responses. | Prepares private image architecture without exposing image URLs. |
+| `vite.config.js` | Added local dev middleware for `/api/memory-images`. | Allows local testing of the private image foundation. |
+| `.env.example` | Added `UNLOCK_TOKEN_SECRET`, `PRIVATE_MEMORY_IMAGES_ENABLED`, and `VITE_BACKGROUND_MUSIC_URL` placeholders. | Documents Phase 2 env configuration safely. |
+| `.gitignore` | Ignores real audio/image files under public media folders while keeping README docs. | Prevents accidental private/large media commits. |
+| `public/audio/README.md` | Documented public audio guardrails and hosted music option. | Clarifies not to commit unconfirmed real music. |
+| `public/images/memories/README.md` | Documented private image warning and future storage approach. | Clarifies public folder is not private. |
 
 ## 5. Key Technical Decisions
 
@@ -54,6 +70,10 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 - Secret text is normalized and paginated after the API returns it, preserving Vietnamese characters and escaped newlines.
 - `MagicPageEffect` uses lightweight R3F particles and a subtle shimmer instead of heavy post-processing.
 - Reduced-motion users receive fewer particles and shorter movement.
+- Music uses `VITE_BACKGROUND_MUSIC_URL` only for public hosted MP3 URLs; otherwise it falls back to `/audio/background-music.mp3`.
+- YouTube is not used as the primary music source because it requires an iframe/player and is not a clean `<audio>` source.
+- Real audio/image media under `public/` is ignored by default; only placeholder README files should be committed unless media is intentionally public.
+- Private image access is designed for a future API flow: unlock returns a short-lived token, `/api/memory-images` validates it, and a future storage provider can return signed URLs or proxied images.
 
 ## 6. Bugs / Issues Found
 
@@ -65,11 +85,14 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 | Sparkle particles initially looked too large. | Fixed | Reduced particle size, opacity, and count for a subtler premium effect. |
 | Left-page back navigation was unreliable with narrow hit meshes. | Fixed | Moved navigation decision to the root book click handler. |
 | Build reports a large JS chunk warning because Three.js/R3F are sizeable. | Not blocking | Build succeeds; future code splitting can reduce the warning. |
+| Real media could be accidentally committed from `public/`. | Fixed | Added `.gitignore` rules for audio and memory image files while keeping README placeholders. |
+| Private images need protection from direct public URLs. | Foundation added | Added token helper and `/api/memory-images` placeholder endpoint for future signed/proxied private image access. |
+| YouTube was considered for music. | Documented | Kept YouTube out of implementation and documented it as a fallback/link only. |
 
 ## 7. Remaining Tasks
 
-- [ ] Add real optional memory images at `public/images/memories/memory-1.jpg` and `memory-2.jpg`.
-- [ ] Add a real optional music file at `public/audio/background-music.mp3`.
+- [ ] Decide whether the local `public/audio/background-music.mp3` is rights-cleared and intentionally public before ever staging it.
+- [ ] Add only safe public placeholder images at `public/images/memories/memory-1.jpg` and `memory-2.jpg`, or keep real images in private storage.
 - [ ] Tune final page text density after final real greeting/secret copy is chosen.
 - [ ] Optional: code-split the 3D scene to reduce the build chunk warning.
 - [ ] Phase 2: implement private memory image storage outside `public/`, using signed URLs or an authenticated/proxied serverless image endpoint.
@@ -90,6 +113,9 @@ Create `.env.local`:
 SECRET_ANSWER_1=your_first_answer_here
 SECRET_ANSWER_2=your_second_answer_here
 SECRET_MESSAGE=your_secret_message_here
+UNLOCK_TOKEN_SECRET=your_unlock_token_secret_here
+PRIVATE_MEMORY_IMAGES_ENABLED=false
+VITE_BACKGROUND_MUSIC_URL=
 ```
 
 Run the dev server:
@@ -116,6 +142,8 @@ Test interactions:
 - Continue with right-page clicks to reach the secret pages.
 - Click memory hotspot dots to open the lightbox.
 - Use the music button; missing audio should not crash the app.
+- Test hosted music by setting `VITE_BACKGROUND_MUSIC_URL` to a public MP3 URL and restarting the dev server.
+- Test `/api/memory-images` with a valid unlock token; it should return an empty/not-configured response until private storage is implemented.
 
 ## 9. How to Deploy
 
@@ -126,7 +154,10 @@ Vercel deployment notes:
 - Output directory: `dist`
 - API endpoint: `/api/unlock`
 - Optional music path: `public/audio/background-music.mp3`
-- Optional memory image path: `public/images/memories/`
+- Optional public hosted music URL: `VITE_BACKGROUND_MUSIC_URL`
+- Optional public memory placeholder path: `public/images/memories/`
+- Future private image token secret: `UNLOCK_TOKEN_SECRET`
+- Future private image feature flag: `PRIVATE_MEMORY_IMAGES_ENABLED=false`
 - No database, auth provider, or persistent backend storage is required.
 
 ## 10. Final Verification
@@ -153,3 +184,8 @@ Vercel deployment notes:
 - Mobile layout checked: Yes, previous mobile fit changes remain; natural page clicks use the same Canvas click model.
 - No secrets exposed in frontend code: Yes, source/build searches found no `SECRET_`/`VITE_` secret usage.
 - Known limitations: Build emits a non-fatal large chunk warning due to Three.js/R3F.
+- Phase 2 music strategy checked: Yes, configurable public MP3 URL plus local fallback.
+- Phase 2 private image foundation checked: Yes, token helper and locked placeholder endpoint added.
+- Media gitignore checked: Yes, real audio/images under public media folders are ignored by default.
+- YouTube primary music checked: Not implemented by design.
+- Phase 3 closed-book star animation: Still a future idea, not implemented.

@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import { Music2, Pause, VolumeX } from 'lucide-react';
 
+const configuredMusicUrl = import.meta.env.VITE_BACKGROUND_MUSIC_URL?.trim();
+const musicSource = configuredMusicUrl || '/audio/background-music.mp3';
+
 function MusicControl() {
   const audioRef = useRef(null);
   const [musicState, setMusicState] = useState('idle');
@@ -30,7 +33,7 @@ function MusicControl() {
     <>
       <audio
         ref={audioRef}
-        src="/audio/background-music.mp3"
+        src={musicSource}
         loop
         preload="none"
         onError={() => setMusicState('unavailable')}

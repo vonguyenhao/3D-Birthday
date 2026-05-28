@@ -6,3 +6,9 @@ dist
 .DS_Store
 *.log
 verification-screenshots/
+
+# Public placeholder docs are tracked, but real media should not be committed by accident.
+public/audio/*
+!public/audio/README.md
+public/images/memories/*
+!public/images/memories/README.md
