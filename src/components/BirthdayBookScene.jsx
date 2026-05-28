@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   ContactShadows,
@@ -7,13 +7,13 @@ import {
   OrbitControls,
   Sparkles,
   Stars,
-  Text,
   useCursor,
 } from '@react-three/drei';
 import { MathUtils, Vector3 } from 'three';
 import BookPage from './BookPage.jsx';
 import PageTurnControls from './PageTurnControls.jsx';
 import MagicPageEffect from './MagicPageEffect.jsx';
+import CoverConstellation from './CoverConstellation.jsx';
 
 function PageTurnSheet({ pageIndex, isClosed }) {
   const sheetRef = useRef();
@@ -80,8 +80,12 @@ function BookModel({
   secretUnlocked,
   canGoPrevious,
   canGoNext,
+  coverAwakened,
+  coverFormed,
   magicEvent,
   reducedMotion,
+  onAwakenCover,
+  onCoverFormed,
   onOpen,
   onClose,
   onNextPage,
@@ -95,6 +99,7 @@ function BookModel({
   const { size } = useThree();
   const [bookHovered, setBookHovered] = useState(false);
   const [coverHovered, setCoverHovered] = useState(false);
+  const [coverBurstKey, setCoverBurstKey] = useState(0);
   const actionableHover = bookHovered || coverHovered;
   const baseScale = size.width < 720 ? 0.68 : 1.18;
   const targetScale = bookHovered && isClosed ? baseScale * 1.035 : baseScale;
@@ -119,6 +124,16 @@ function BookModel({
     onSceneInteract?.();
 
     if (isClosed) {
+      if (!coverAwakened) {
+        onAwakenCover();
+        return;
+      }
+
+      if (!coverFormed) {
+        return;
+      }
+
+      setCoverBurstKey((key) => key + 1);
       onOpen();
       return;
     }
@@ -245,26 +260,13 @@ function BookModel({
             <meshStandardMaterial color={coverHovered ? '#e49caf' : '#cd7d98'} roughness={0.55} metalness={0.04} />
           </mesh>
 
-          <mesh position={[1.62, 0.114, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.35, 0.405, 80]} />
-            <meshStandardMaterial color="#f1ce7a" metalness={0.38} roughness={0.28} />
-          </mesh>
-
-          <Suspense fallback={null}>
-            <Text
-              position={[1.62, 0.145, -0.17]}
-              rotation={[-Math.PI / 2, 0, 0]}
-              fontSize={0.16}
-              maxWidth={1.72}
-              lineHeight={1.1}
-              textAlign="center"
-              color="#ffecc0"
-              anchorX="center"
-              anchorY="middle"
-            >
-              Birthday Book
-            </Text>
-          </Suspense>
+          <CoverConstellation
+            awakened={coverAwakened}
+            hovered={coverHovered || (bookHovered && isClosed)}
+            openBurstKey={coverBurstKey}
+            reducedMotion={reducedMotion}
+            onFormed={onCoverFormed}
+          />
         </group>
 
         {bookHovered && isClosed ? (
@@ -355,8 +357,12 @@ function BirthdayBookScene({
   secretUnlocked,
   canGoPrevious,
   canGoNext,
+  coverAwakened,
+  coverFormed,
   magicEvent,
   reducedMotion,
+  onAwakenCover,
+  onCoverFormed,
   onOpen,
   onClose,
   onNextPage,
@@ -389,8 +395,12 @@ function BirthdayBookScene({
         secretUnlocked={secretUnlocked}
         canGoPrevious={canGoPrevious}
         canGoNext={canGoNext}
+        coverAwakened={coverAwakened}
+        coverFormed={coverFormed}
         magicEvent={magicEvent}
         reducedMotion={reducedMotion}
+        onAwakenCover={onAwakenCover}
+        onCoverFormed={onCoverFormed}
         onOpen={onOpen}
         onClose={onClose}
         onNextPage={onNextPage}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import BirthdayBookScene from './components/BirthdayBookScene.jsx';
 import UnlockModal from './components/UnlockModal.jsx';
@@ -46,8 +46,11 @@ function App() {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [secretMessage, setSecretMessage] = useState('');
+  const [unlockToken, setUnlockToken] = useState('');
   const [activeImage, setActiveImage] = useState(null);
   const [sceneInteracted, setSceneInteracted] = useState(false);
+  const [coverAwakened, setCoverAwakened] = useState(false);
+  const [coverFormed, setCoverFormed] = useState(false);
   const [magicEvent, setMagicEvent] = useState(null);
   const [secretPageSeen, setSecretPageSeen] = useState(false);
   const magicEventId = useRef(0);
@@ -132,6 +135,16 @@ function App() {
     triggerMagic('open');
   };
 
+  const awakenCover = () => {
+    setSceneInteracted(true);
+    setCoverFormed(false);
+    setCoverAwakened(true);
+  };
+
+  const markCoverFormed = useCallback(() => {
+    setCoverFormed(true);
+  }, []);
+
   const closeBook = () => {
     setSceneInteracted(true);
     setUnlockOpen(false);
@@ -163,11 +176,46 @@ function App() {
     setUnlockOpen(true);
   };
 
-  const revealSecretMessage = (message) => {
+  const revealSecretMessage = (result) => {
+    const message = typeof result === 'string' ? result : result?.message;
+
     setSecretMessage(normalizeMessageText(message));
+    setUnlockToken(typeof result === 'object' && result?.unlockToken ? result.unlockToken : '');
     setSecretPageSeen(false);
     setUnlockOpen(false);
     triggerMagic('unlock');
+  };
+
+  const openMemoryImage = async (fallbackImage) => {
+    if (!unlockToken) {
+      setActiveImage(fallbackImage);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/memory-images?token=${encodeURIComponent(unlockToken)}`);
+      const result = await response.json();
+
+      if (!response.ok || !result.success || !result.configured || !result.images?.length) {
+        setActiveImage({
+          ...fallbackImage,
+          caption: result.message || fallbackImage.caption || 'Private memory images are not available yet.',
+        });
+        return;
+      }
+
+      const selectedImage = result.images[0];
+      setActiveImage({
+        src: `/api/memory-image?token=${encodeURIComponent(unlockToken)}&pathname=${encodeURIComponent(selectedImage.pathname)}`,
+        alt: selectedImage.filename || 'Private birthday memory',
+        caption: 'Private memory image unlocked for this session.',
+      });
+    } catch {
+      setActiveImage({
+        ...fallbackImage,
+        caption: 'Private memory images could not be loaded right now.',
+      });
+    }
   };
 
   return (
@@ -184,14 +232,18 @@ function App() {
           secretUnlocked={secretUnlocked}
           canGoPrevious={canGoPrevious}
           canGoNext={canGoNext}
+          coverAwakened={coverAwakened}
+          coverFormed={coverFormed}
           magicEvent={magicEvent}
           reducedMotion={prefersReducedMotion}
+          onAwakenCover={awakenCover}
+          onCoverFormed={markCoverFormed}
           onOpen={openBook}
           onClose={closeBook}
           onNextPage={goNext}
           onPreviousPage={goPrevious}
           onUnlockRequest={requestUnlock}
-          onMemoryOpen={setActiveImage}
+          onMemoryOpen={openMemoryImage}
           onSceneInteract={() => setSceneInteracted(true)}
         />
       </section>
