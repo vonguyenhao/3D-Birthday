@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import unlockHandler from './api/unlock.js';
+import memoryImageHandler from './api/memory-image.js';
 import memoryImagesHandler from './api/memory-images.js';
 
 const readJsonBody = (request) =>
@@ -46,9 +47,17 @@ function localUnlockApiPlugin() {
         response.end(JSON.stringify(payload));
         return this;
       },
+      write(chunk) {
+        response.write(chunk);
+        return this;
+      },
+      end(chunk) {
+        response.end(chunk);
+        return this;
+      },
     };
 
-    handler(request, responseAdapter);
+    await handler(request, responseAdapter);
   };
 
   return {
@@ -80,6 +89,21 @@ function localUnlockApiPlugin() {
             JSON.stringify({
               success: false,
               message: 'Something went wrong while checking private memory image access.',
+            }),
+          );
+        }
+      });
+
+      server.middlewares.use('/api/memory-image', async (request, response) => {
+        try {
+          await runHandler(memoryImageHandler, request, response);
+        } catch {
+          response.statusCode = 400;
+          response.setHeader('Content-Type', 'application/json');
+          response.end(
+            JSON.stringify({
+              success: false,
+              message: 'Something went wrong while loading the private memory image.',
             }),
           );
         }

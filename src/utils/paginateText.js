@@ -1,12 +1,14 @@
+import { graphemeLength, normalizeDisplayText, splitGraphemes } from './text.js';
+
 export const normalizeMessageText = (value) =>
-  String(value || '')
+  normalizeDisplayText(value)
     .replace(/\\n/g, '\n')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .trim();
 
 const splitLongWord = (word, maxLineLength) => {
-  const characters = Array.from(word);
+  const characters = splitGraphemes(word);
   const chunks = [];
 
   for (let index = 0; index < characters.length; index += maxLineLength) {
@@ -44,16 +46,16 @@ export const paginateText = (value, options = {}) => {
   };
 
   const pushLine = (line = '') => {
-    const normalizedLine = line.trimEnd();
+    const normalizedLine = normalizeDisplayText(line).trimEnd();
     const wouldOverflow =
-      lines.length >= maxLines || (charCount + normalizedLine.length > maxChars && lines.length > 0);
+      lines.length >= maxLines || (charCount + graphemeLength(normalizedLine) > maxChars && lines.length > 0);
 
     if (wouldOverflow) {
       commitPage();
     }
 
     lines.push(normalizedLine);
-    charCount += normalizedLine.length;
+    charCount += graphemeLength(normalizedLine);
   };
 
   normalized.split('\n').forEach((paragraph, paragraphIndex, paragraphs) => {
@@ -68,12 +70,12 @@ export const paginateText = (value, options = {}) => {
 
     words.forEach((rawWord) => {
       const wordParts =
-        Array.from(rawWord).length > maxLineLength ? splitLongWord(rawWord, maxLineLength) : [rawWord];
+        graphemeLength(rawWord) > maxLineLength ? splitLongWord(rawWord, maxLineLength) : [rawWord];
 
       wordParts.forEach((word) => {
         const candidate = currentLine ? `${currentLine} ${word}` : word;
 
-        if (Array.from(candidate).length > maxLineLength && currentLine) {
+        if (graphemeLength(candidate) > maxLineLength && currentLine) {
           pushLine(currentLine);
           currentLine = word;
           return;
@@ -97,7 +99,7 @@ export const paginateText = (value, options = {}) => {
 };
 
 export const getPageFontSize = (text) => {
-  const length = normalizeMessageText(text).length;
+  const length = graphemeLength(normalizeMessageText(text));
 
   if (length > 330) {
     return 0.066;

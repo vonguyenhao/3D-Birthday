@@ -11,4 +11,4 @@ Files in `public` are served directly by the browser and are not secret. Do not 
 
 Real image files in this folder are ignored by git by default. Use this folder only for safe public placeholders.
 
-For private images, store them outside the repository in private object storage and expose them only through a future authenticated/signed serverless API.
+For private images, store them outside the repository in Vercel Blob private storage. The app can access them after unlock through the token-protected `/api/memory-images` metadata endpoint and `/api/memory-image` proxy endpoint.

@@ -48,7 +48,7 @@ export default function handler(request, response) {
     if (!answersMatch) {
       return response.status(200).json({
         success: false,
-        message: 'Câu trả lời xém đúng ròi, thử lại lần nữa nha em :)))',
+        message: 'Cau tra loi xem dung roi, thu lai lan nua nha em :)))',
       });
     }
 
@@ -67,7 +67,7 @@ export default function handler(request, response) {
   } catch {
     return response.status(400).json({
       success: false,
-      message: 'Có cái gì đó lag nhẹ, thử lại lần nữa xem nha',
+      message: 'Co cai gi do lag nhe, thu lai lan nua xem nha',
     });
   }
 }

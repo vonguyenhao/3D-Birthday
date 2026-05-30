@@ -2,7 +2,7 @@
 
 A fullscreen magical 3D birthday book built with Vite, React, React Three Fiber, Drei, and Framer Motion.
 
-The closed book starts with drifting magical star-orbs. The first click awakens the cover and forms a crab-inspired Cancer constellation emblem; the second click opens the book. After it opens, click the right page to go forward and click the left page to go back. Secret pages unlock through `/api/unlock` and render only inside the 3D book.
+The closed book starts with drifting magical star-orbs. The first click awakens the cover and forms a crab-inspired Cancer constellation emblem; the second click opens the book. After it opens, click the right page to go forward and click the left page to go back. A subtle hidden mark inside the open book reveals a sealed secret envelope. Opening the wax seal shows the unlock questions; after success, the book dissolves into stardust and the secret message appears as readable ember-glow sections in the air.
 
 ## Run Locally
 
@@ -36,7 +36,7 @@ VITE_BACKGROUND_MUSIC_URL=
 SECRET_MESSAGE=your_first_secret_line_here\nyour_second_secret_line_here
 ```
 
-After successful unlock, the frontend receives the message from `/api/unlock`, converts escaped `\n` into real line breaks, and paginates the message across secret book pages.
+After successful unlock, the frontend receives the message from `/api/unlock`, converts escaped `\n` into real line breaks, and reveals it in centered sky-message sections. Each section pauses for roughly 7 seconds so the message can be read slowly. The secret is not rendered before the backend returns it.
 
 ## Book Interactions
 
@@ -46,10 +46,15 @@ After successful unlock, the frontend receives the message from `/api/unlock`, c
 - Click/tap the pink cover to close it.
 - Click/tap the right page to move forward.
 - Click/tap the left page to move backward.
-- Find the subtle glowing lock inside the book and tap it to open the unlock modal.
-- After successful unlock, continue with normal right-page navigation to reach the secret pages.
+- Find the subtle glowing secret mark inside the open book and tap it to reveal the sealed envelope.
+- Tap the wax seal/envelope to unfold the parchment letter and show the two questions.
+- After successful unlock, the letter fades, the book releases the message, dissolves, and the secret text appears in the sky.
+- Use Back to book or Escape to close the secret reveal and restore the open book.
+- Use Replay to restart the reveal without calling `/api/unlock` again.
+- Use Show full message to complete the animation and read the completed message in sections.
+- After the secret is unlocked, the hidden seal remains in the book as a replay trigger and does not ask the questions again.
 
-Opening the book, turning pages, unlocking the secret, and reaching the secret pages trigger subtle gold/white/pink sparkle effects.
+Opening the book, turning pages, unlocking the secret, and releasing the final message trigger subtle gold/white/pink sparkle effects.
 
 The closed cover uses a two-step animated crab-inspired Cancer constellation emblem. Before the first click, glowing star-orbs drift around the cover edges. The first click sends them inward into a stylised shell, claw, and leg shape. The second click triggers a small sparkle burst from the formed emblem and opens the book.
 
