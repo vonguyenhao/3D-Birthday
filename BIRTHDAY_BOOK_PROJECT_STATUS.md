@@ -2,13 +2,13 @@
 
 ## 1. Project Overview
 
-A fullscreen magical 3D birthday book experience. The receiver opens a keepsake book, flips through greeting and memory pages by clicking the pages themselves, discovers a subtle locked page, unlocks private secret pages through `/api/unlock`, and reads the secret message inside the 3D book.
+A fullscreen magical 3D birthday book experience. The receiver opens a keepsake book, reads greeting and memory pages, taps a subtle in-book secret mark, opens a sealed wax-stamped envelope to answer unlock questions through `/api/unlock`, then watches the book dissolve into stardust as the secret message appears in readable ember-glow sections in the air.
 
 ## 2. Current Status
 
 - Overall status: Complete
-- Last updated timestamp: 2026-05-28 14:17 ACST
-- Current working state: Closed-book interaction redesign completed. The book now starts with drifting cover particles, first click forms the crab-inspired Cancer emblem, and second click opens the book while existing book, unlock, music, and private image flows remain intact.
+- Last updated timestamp: 2026-05-31 02:48 ACST
+- Current working state: Interaction bug pass completed. The dissolve remains a temporary cinematic state; Back to book restores the open book, page flipping is backed by invisible left/right page hit zones, and the hidden seal remains available after unlock so the already-unlocked secret can replay without another API call.
 
 ## 3. Completed Work
 
@@ -26,7 +26,7 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 - [x] Page navigation changed to click/tap right page forward and left page backward
 - [x] Writing/reply page removed
 - [x] Reply localStorage logic removed
-- [x] Secret message kept inside book pages
+- [x] Secret message removed from book pages
 - [x] Magical sparkle/light effects added
 - [x] README updated
 - [x] Phase 2 music strategy added
@@ -52,22 +52,61 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 - [x] Initial floating star-orbs around the cover added
 - [x] First closed-book click now forms the Cancer crab emblem without opening the book
 - [x] Second closed-book click opens the book after formation completes
+- [x] Background/outside clicks no longer turn pages
+- [x] Page turning restricted to left/right page hit areas
+- [x] Unlock modal redesigned as a parchment-style secret letter
+- [x] Vietnamese modal text encoding fixed
+- [x] Hidden unlock mark made available from the open book without flipping to a hidden page
+- [x] Magical book burn/dissolve reveal added
+- [x] Secret message appears in the air in staged readable chunks after unlock
+- [x] Secret page generation removed
+- [x] Secret reveal close/back control added
+- [x] Escape key closes the secret reveal
+- [x] Secret reveal replay control added
+- [x] Show full message control added
+- [x] Secret message reveal changed from giant scroll block to staged readable chunks
+- [x] Unlock modal refined into a less boxy parchment letter
+- [x] Unlock modal vertical height reduced
+- [x] Secret reveal timing slowed to roughly 7 seconds per section
+- [x] Reveal timing constants added
+- [x] Hidden unlock changed from immediate form to sealed envelope flow
+- [x] Wax-seal click/tap opens the unlock letter
+- [x] Unlock questions appear only after envelope opens
+- [x] Correct unlock fades the letter before book dissolve
+- [x] Secret reveal text restyled with warm ember/fire glow
+- [x] Shared NFC/grapheme text utility added
+- [x] Vietnamese text rendering protected from combining-mark splitting
+- [x] Page text raycasting disabled so page clicks reach turn controls
+- [x] Disabled page-turn hit planes removed so they do not block interactions
+- [x] Book dissolve changed to temporary/non-destructive reveal state
+- [x] Back to book restores the open book and saved page index
+- [x] Page flipping works after returning from secret reveal
+- [x] Hidden mark remains visible after unlock
+- [x] Hidden mark replays existing unlocked secret without another API call
+- [x] Closed-book click target made reliable with an invisible book-area hit button
+- [x] Page flipping made persistent with invisible left/right page hit buttons
+- [x] Hidden/replay seal made persistent with an invisible seal hit button
+- [x] Removed fragile `coverFormed` state dependency from opening behavior
 
 ## 4. Files Changed
 
 | File | Change Summary | Reason |
 | ---- | -------------- | ------ |
-| `src/App.jsx` | Added cover awakened/formed state and callback wiring. | Supports first-click formation and second-click opening without changing the open-book flow. |
-| `src/components/BirthdayBookScene.jsx` | Added closed-book click gating for unawakened/forming/formed cover states and passed cover state into the constellation. | First click forms the emblem; second click opens only after formation completes. |
+| `src/App.jsx` | Added saved reveal return page state, robust spread-index clamping, non-destructive reveal close restoration, unlocked-secret replay routing, and invisible DOM hit zones for closed-book activation, page turns, and hidden seal replay. | Back to book restores the visible open book and page flipping, while the already unlocked secret can be replayed without another API call. |
+| `src/components/BirthdayBookScene.jsx` | Added persistent in-book secret/replay mark, book burn/dissolve particles, interaction freeze during reveal, temporary book disappearance only while the reveal overlay is active, narrowed the pink-cover close hit area, and added reliable 3D cover/mark hit targets. | Unlock/replay remains accessible from the open book and success releases the message cinematically without permanently removing the book. |
 | `src/components/CoverConstellation.jsx` | Replaced abstract constellation with a 14-star crab-inspired Cancer emblem, outside drifting orbs, click-triggered inward formation, smaller halos, hover shimmer, idle twinkle, dust particles, and click-open burst. | Makes the closed cover interaction visible, intentional, and clearly Cancer / Cu Giai inspired. |
-| `src/components/PageTurnControls.jsx` | Replaced visible Back/Turn buttons with invisible page hit areas and subtle hover edge glow. | Keeps navigation natural and uncluttered. |
-| `src/components/BookPage.jsx` | Removed reply page rendering and reduced unlocked-page label clutter. | Keeps focus on greeting, memory, locked hint, and secret pages. |
+| `src/components/PageTurnControls.jsx` | Replaced flat page-turn planes with shallow page-sized hit volumes, stopped click propagation, and rendered only enabled hit targets. | Page turns remain bound to actual active page interaction areas, and inactive areas do not block other clicks. |
+| `src/components/BookPage.jsx` | Removed obsolete locked-secret page mark rendering, normalized title/body text before display, and disabled text raycasting. | The secret flow no longer uses a hidden book page, Vietnamese text stays composed, and page clicks reach the turn controls. |
+| `src/components/SecretRevealScene.jsx` | Replaced the old continuous reveal paragraph with sentence/line chunking, staged section reveal, Back to book, Replay, Show full message, Escape close, completed-message section controls, named 7-second pacing constants, and grapheme-aware chunk sizing. | Displays the unlocked secret romantically without rushing, breaking Vietnamese accents, or using a giant scrollable text block. |
 | `src/components/MagicPageEffect.jsx` | Added reusable R3F sparkle/shimmer effect. | Provides magical feedback on open, page turn, unlock, and first secret reveal. |
 | `src/components/MemoryHotspot.jsx` | Kept optional memory hotspots and graceful lightbox trigger. | Memory images remain optional without breaking navigation. |
 | `src/components/WritingPage.jsx` | Deleted. | Writing/reply feature was removed by request. |
-| `src/styles.css` | Removed writing and visible page-button CSS; kept compact memory hotspot styling. | Removes unused UI and visual clutter. |
-| `README.md` | Documented the first-click awaken and second-click open cover interaction. | Keeps documentation aligned with current UX. |
-| `BIRTHDAY_BOOK_PROJECT_STATUS.md` | Updated current redesign status, two-step cover interaction, files changed, testing, and limitations. | Required progress tracking. |
+| `src/components/UnlockModal.jsx` | Rebuilt the unlock overlay as a sealed-envelope state flow: `sealed`, `opening`, `opened`, submitting/error, and `success`, while preserving the same answer payload and `/api/unlock` call. | Removes the immediate web-form feeling and makes hidden unlock feel like opening a secret letter. |
+| `src/utils/text.js` | Added `normalizeDisplayText`, `splitGraphemes`, and `graphemeLength` using `Intl.Segmenter` with fallback. | Prevents Vietnamese combining marks from being split during pagination or reveal layout. |
+| `src/utils/paginateText.js` | Uses NFC normalization and grapheme-aware word splitting/length checks. | Keeps Vietnamese text intact when wrapping/paginating page content. |
+| `src/styles.css` | Added burgundy parchment envelope, wax seal, opening flap animation, unfolded letter styling, writing-line inputs, ember/fire sky-message text styling, and invisible interaction hit buttons for closed book/page/seal clicks. | Makes the unlock and final reveal feel more magical while keeping book interactions reliable and visually uncluttered. |
+| `README.md` | Documented the sealed-envelope unlock flow, wax-seal interaction, dissolve transition, and slower ember-message reveal. | Keeps documentation aligned with current UX. |
+| `BIRTHDAY_BOOK_PROJECT_STATUS.md` | Updated current redesign status, secret reveal flow, files changed, testing, and limitations. | Required progress tracking. |
 | `src/components/MusicControl.jsx` | Added `VITE_BACKGROUND_MUSIC_URL` support with local MP3 fallback. | Allows hosted public MP3 music without committing audio. |
 | `api/_unlockToken.js` | Added short-lived HMAC unlock token helper. | Foundation for future private memory image access without a database. |
 | `api/unlock.js` | Optionally returns `unlockToken` when `UNLOCK_TOKEN_SECRET` is configured. | Keeps normal unlock working while enabling future private image APIs. |
@@ -83,7 +122,18 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 
 ## 5. Key Technical Decisions
 
-- Page navigation is handled by clicking the open book itself: right half goes forward, left half goes backward.
+- Page navigation is backed by invisible left/right DOM hit areas aligned to the open paper pages, with R3F page hit volumes retained as scene-level support.
+- The open-book root group no longer infers page turns from generic click coordinates.
+- The secret unlock mark is now a persistent subtle seal on the open book, so the user does not need to flip to a hidden page.
+- Successful `/api/unlock` moves the app into `burning`, then `message`, instead of appending secret pages to the page model.
+- During the burn/dissolve reveal, page and orbit interactions are disabled and the book shrinks/fades out behind magical embers, but this is only temporary.
+- Back to book sets `revealStage` back to `idle`, reopens the book, restores/clamps the saved normal page index, and re-enables page controls.
+- The hidden seal remains visible after unlock; in the unlocked state it acts as a replay trigger using the already stored `secretMessage`.
+- The secret message is split into readable chunks after the book disappears, preserving Vietnamese characters and escaped line breaks.
+- `SecretRevealScene` uses named timing constants: `INTRO_DELAY_MS`, `REVEAL_CHUNK_DELAY_MS`, `SHORT_SECTION_DELAY_MS`, `LONG_SECTION_DELAY_MS`, and `LINE_FADE_DURATION_MS`.
+- The default reveal section pause is 7000ms, with shorter pauses for very small sections and longer pauses for full sections.
+- Long completed messages use small section navigation instead of an internal scrollbar.
+- Reveal controls are frontend-only and reuse the already unlocked message; Replay does not call `/api/unlock` again.
 - Visible page navigation labels/buttons were removed; only a subtle edge glow appears on desktop hover.
 - The writing/reply page was removed completely, including state persistence and component code.
 - `/api/unlock` remains the security boundary. The frontend does not contain secret answers or the secret message before successful unlock.
@@ -99,12 +149,18 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 - The closed cover constellation is a 3D layer attached to the cover pivot, not a separate HTML overlay, so it stays visually connected to the book as the cover opens.
 - The closed-book state model now separates unawakened, forming, formed, and open behavior.
 - The first closed-book click awakens the cover instead of opening the book.
-- The second closed-book click opens the book only after formation completes.
+- The second closed-book click opens the book after the cover has been awakened; opening no longer depends on the visual formation callback timing.
 - The cover emblem now uses a crab-like structure: compact central shell stars, mirrored upper claw stars, and lower leg extensions.
 - Initial unawakened particles are positioned outside the cover-emblem area and drift around the cover edges.
 - The constellation forms once from outside drifting star-orbs into the crab-inspired layout and then remains in a subtle idle state to avoid a distracting repeating loop.
 - Formation is staggered so the body resolves first, then claws and legs become readable.
 - Reduced-motion mode skips most formation movement and settles the constellation quickly.
+- The unlock overlay keeps the same `/api/unlock` flow, but the user first sees a CSS-built sealed envelope. The form is not rendered until the envelope enters the opened state.
+- The unlock component models `sealed`, `opening`, `opened`, submitting/error, and `success` states locally; success delays the existing `onUnlocked` callback briefly so the letter can fade before book dissolve starts.
+- The final secret text uses ember-colored text shadows, flicker, and warm active-line sparkles while keeping the 7-second section pacing.
+- User-facing dynamic text is normalized with `String(value).normalize('NFC')` before display where it is processed.
+- Text length and long-word splitting use grapheme clusters via `Intl.Segmenter('vi', { granularity: 'grapheme' })` with `Array.from` fallback.
+- Drei page text is made non-raycastable so clicking text on a page still triggers the active page-turn hit area behind it.
 
 ## 6. Bugs / Issues Found
 
@@ -126,6 +182,26 @@ A fullscreen magical 3D birthday book experience. The receiver opens a keepsake 
 | Star halos looked too bubble-like. | Fixed | Reduced halo scale and opacity around the main stars. |
 | Cover animation did not feel intentional enough. | Fixed | Added visible initial floating star-orbs and a first-click inward formation sequence. |
 | First click opened the book too quickly to show the cover magic. | Fixed | First click now forms the emblem; second click opens after formation completes. |
+| Empty scene/background clicks could turn pages. | Fixed | Removed generic root-level open-book page-turn logic and moved navigation callbacks to page hit meshes only. |
+| Unlock modal felt like a generic web popup. | Fixed | Restyled it as a parchment/secret-letter note with border details, warm paper color, seal, and corrected Vietnamese copy. |
+| Secret flow depended on flipping to hidden pages. | Fixed | Removed secret pages and added a persistent in-book secret mark available from the open spread. |
+| Page turning was blocking reliable access to the hidden page. | Fixed | Secret access no longer depends on page navigation. |
+| Secret reveal needed to feel more cinematic. | Fixed | Added magical book dissolve and staged glowing sky-message reveal. |
+| Secret reveal could not be exited. | Fixed | Added Back to book plus Escape key handling. |
+| Secret reveal looked like a giant scrolling text document. | Fixed | Replaced the scrollable paragraph with chunked staged sections, active-line shimmer, and completed-message section navigation. |
+| Typewriter reveal felt rough for long text. | Fixed | Reveals sentence/line chunks with fade/rise motion and a Show full message option. |
+| Unlock modal still felt too much like a web form. | Fixed | Reduced title/form weight, removed boxed question cards, added paper writing lines, softened the submit button, and reduced vertical height. |
+| Secret reveal advanced too quickly. | Fixed | Auto-advance now waits around 7 seconds per readable section, with named constants for future tuning. |
+| Unlock experience still felt like a modal form. | Fixed | Hidden mark now shows a sealed envelope first; the wax seal opens an unfolded parchment letter before the form appears. |
+| Final sky message needed more fire/ember emotion. | Fixed | Warmed text colors, glow, active-line shimmer, and subtle ember flicker. |
+| Vietnamese accents could render as separated combining marks when text was processed. | Fixed | Added NFC normalization and grapheme-safe splitting/length checks across pagination, book page text, unlock letter text, and secret reveal chunks. |
+| Page flipping became unreliable after interaction changes. | Fixed | Disabled page text raycasting and removed inactive hit planes so active left/right page hit areas receive clicks reliably. |
+| Book stayed gone after the cinematic secret reveal. | Fixed | Back to book now resets reveal state to idle, forces the book open, and restores a valid saved page index. |
+| Hidden mark disappeared after unlock. | Fixed | Hidden mark is always rendered while the book is open and not revealing; after unlock it becomes a replay seal. |
+| Replaying the secret required answering again. | Fixed | Clicking the unlocked seal starts the reveal with the stored secret message and does not call `/api/unlock`. |
+| Closed-book second click could miss because cover constellation raycasts did not always bubble to the open handler. | Fixed | Added a closed-only invisible book-area hit button and removed the fragile `coverFormed` gate. |
+| Page flipping could remain unreliable after returning from reveal because 3D page raycasts competed with cover/page scene meshes. | Fixed | Added invisible left/right page hit buttons that remount whenever the book is open and `revealStage` is idle. |
+| Hidden/replay seal could be visually present but hard to click after unlock. | Fixed | Added an invisible seal hit button above the page hit zones; the unlocked seal routes directly to stored-message replay. |
 
 ## 7. Remaining Tasks
 
@@ -180,9 +256,18 @@ Test interactions:
 - Click/tap the pink cover to close it.
 - Click/tap the right page to go forward.
 - Click/tap the left page to go backward.
-- Tap the subtle glowing lock inside the book to open the unlock modal.
+- Click/tap on visible page text as well as blank paper; page flipping should still work through the active page hit area.
+- Click/tap empty background or outside the book; pages should not turn.
+- Tap the subtle glowing secret mark inside the open book to show the sealed envelope.
+- Tap the wax seal/envelope and confirm the letter opens before questions appear.
+- Confirm the opened letter appears as parchment, not a standard modal form.
 - Submit incorrect answers, then correct answers.
-- Continue with right-page clicks to reach the secret pages.
+- After correct answers, confirm the modal closes, the book dissolves, and the secret message appears in the air in readable glowing chunks.
+- Use Show full message to complete a long reveal, then use Earlier/Later to review completed sections.
+- Confirm each reveal section remains visible for about 7 seconds before auto-advancing.
+- Click Back to book or press Escape after the reveal; the open book should return on the same valid spread.
+- After returning, flip pages forward/backward and click the hidden seal again; it should replay the existing secret without asking questions.
+- Test Vietnamese text containing accents in `.env.local` `SECRET_MESSAGE`; accents should stay attached in the reveal.
 - Click memory hotspot dots to open the lightbox.
 - Use the music button; missing audio should not crash the app.
 - Test hosted music by setting `VITE_BACKGROUND_MUSIC_URL` to a public MP3 URL and restarting the dev server.
@@ -212,7 +297,7 @@ Vercel deployment notes:
 - npm run dev checked: Yes, fresh Vite server returned HTTP 200 on local port 5183.
 - npm run build checked: Yes, build completed successfully.
 - App loads: Yes, local HTTP smoke test returned the app shell successfully.
-- Closed cover text removed: Yes, source check confirms visible cover “Birthday Book” text was removed.
+- Closed cover text removed: Yes, source check confirms visible cover "Birthday Book" text was removed.
 - Old circular cover emblem removed: Yes, source check confirms `ringGeometry` is no longer used in the scene.
 - Crab-inspired Cancer cover added: Yes, `CoverConstellation` is attached to the cover pivot and uses a body/claw/leg star layout.
 - Abstract constellation replaced: Yes, the prior six-star zigzag layout was replaced with a 14-star crab crest.
@@ -228,14 +313,34 @@ Vercel deployment notes:
 - Book opens by clicking book: Yes.
 - Pink cover closes book: Previously verified and code path unchanged except navigation cleanup.
 - No large Back/Next/Turn overlays remain: Yes, DOM/source checks found no visible page-corner buttons or removed labels.
-- Right page goes forward: Yes, verified by reaching the locked page.
-- Left page goes backward: Yes, verified by returning from the locked page before reopening it.
+- Right page goes forward: Yes, click handling is bound to the right page hit area.
+- Left page goes backward: Yes, click handling is bound to the left page hit area.
+- Page text no longer blocks page turns: Yes, Drei `Text` meshes on book pages have raycasting disabled.
+- Disabled page hit areas no longer block interactions: Yes, inactive previous/next hit planes now render as `null`.
+- Background/outside clicks do not turn pages: Yes, open-book root click navigation was removed and page turning is only wired through `PageTurnControls`.
 - Page turn animation works: Yes, existing turn sheet remains and natural click path triggers it.
 - Hidden unlock flow works: Yes, glowing in-book lock opens the modal.
+- Unlock modal visual redesign checked: Yes, modal now uses a parchment/secret-letter style with decorative border, paper texture, seal, and letter-styled fields.
+- Unlock modal polish checked: Yes, modal is flatter, less boxy, shorter, and uses soft paper writing areas instead of harsh input boxes.
+- Vietnamese modal text checked: Yes, question prompts, note, button text, and fallback error text render as proper Vietnamese instead of mojibake.
+- Vietnamese normalization checked: Yes, display helpers normalize to NFC and pagination/reveal length calculations use grapheme-aware splitting.
 - Incorrect answers show friendly error: Yes.
-- Correct answers unlock secret pages: Yes.
-- Secret appears inside book only: Yes, DOM check confirmed the secret was not present as external text.
-- Long secret pagination remains: Yes, pagination utility unchanged from previous verified flow.
+- Correct answers trigger secret reveal: Yes, `/api/unlock` success sets the burn/dissolve reveal stage.
+- Secret page dependency removed: Yes, source check found no `createSecretPages`, `locked-secret`, or secret page generation in `App`.
+- Book dissolve added: Yes, the scene runs `BookBurnEffect`, disables controls, shrinks the book, and hides it when the reveal reaches message stage.
+- Secret appears in the air: Yes, `SecretRevealScene` reveals backend message chunks with line-break preservation, fade/rise motion, and sparkle/shimmer accents.
+- Secret reveal can be closed: Yes, Back to book and Escape return the app to the open book state.
+- Secret reveal replay works: Yes, Replay restarts the chunk reveal from local state without calling `/api/unlock` again.
+- Show full message works: Yes, the control completes the animation and opens the completed-message section view.
+- Secret reveal pacing checked: Yes, readable sections now use approximately 7-second pauses before auto-advancing.
+- Long secret handling remains: Yes, long messages are split into readable sections with Earlier/Later controls instead of a scrollable text block.
+- Sealed envelope flow checked: Yes, hidden mark opens a sealed envelope first and the questions are only in the opened letter state.
+- Correct unlock handoff checked: Yes, success moves the letter to a fade state before calling the existing unlock success handler and starting book dissolve.
+- Ember text styling checked: Yes, final message uses warm gold/amber text glow, active-line ember sparkle, and subtle flicker.
+- Non-destructive dissolve checked: Yes, Back to book returns `revealStage` to idle and restores the visible open book.
+- Page index restoration checked: Yes, the app saves the current spread before reveal and clamps it to a valid normal page start when returning.
+- Hidden seal after unlock checked: Yes, the seal remains visible and routes to replay instead of reopening the unlock questions.
+- Replay without API checked: Yes, unlocked seal uses the stored `secretMessage` and does not call `/api/unlock`.
 - Writing/reply page removed: Yes, component deleted and DOM/source checks found no reply textarea.
 - Sparkles on open/page turn/unlock/secret reveal: Yes, `MagicPageEffect` is wired to all four triggers and browser run showed no runtime errors.
 - Music control checked: Yes, control remains stable when audio is missing.

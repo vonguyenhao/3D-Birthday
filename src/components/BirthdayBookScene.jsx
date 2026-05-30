@@ -7,9 +7,10 @@ import {
   OrbitControls,
   Sparkles,
   Stars,
+  Text,
   useCursor,
 } from '@react-three/drei';
-import { MathUtils, Vector3 } from 'three';
+import { AdditiveBlending, MathUtils, Vector3 } from 'three';
 import BookPage from './BookPage.jsx';
 import PageTurnControls from './PageTurnControls.jsx';
 import MagicPageEffect from './MagicPageEffect.jsx';
@@ -72,6 +73,143 @@ function PageStack({ side }) {
   );
 }
 
+const burnParticles = Array.from({ length: 54 }, (_, index) => {
+  const angle = (index / 54) * Math.PI * 2;
+  const radius = 0.28 + (index % 9) * 0.16;
+
+  return {
+    id: `burn-${index}`,
+    start: [
+      Math.cos(angle) * radius * 1.55,
+      0.08 + (index % 5) * 0.028,
+      Math.sin(angle) * radius * 0.92,
+    ],
+    drift: [
+      Math.cos(angle) * (0.08 + (index % 4) * 0.025),
+      0.34 + (index % 7) * 0.055,
+      Math.sin(angle) * (0.06 + (index % 5) * 0.02),
+    ],
+    size: 0.014 + (index % 5) * 0.004,
+    delay: (index % 11) * 0.055,
+    color: index % 3 === 0 ? '#ffd783' : index % 3 === 1 ? '#ff9fbd' : '#fff7d2',
+  };
+});
+
+function BookBurnEffect({ reducedMotion = false }) {
+  const particleRefs = useRef([]);
+  const glowRef = useRef();
+  const elapsedRef = useRef(0);
+
+  useFrame((_, delta) => {
+    elapsedRef.current += reducedMotion ? delta * 1.7 : delta;
+    const elapsed = elapsedRef.current;
+
+    if (glowRef.current) {
+      const glow = Math.min(1, elapsed / 1.5);
+      glowRef.current.scale.set(3.2 + glow * 0.7, 1, 2.05 + glow * 0.52);
+      glowRef.current.material.opacity = reducedMotion ? 0.08 : Math.max(0, Math.sin(Math.min(1, elapsed / 3.1) * Math.PI) * 0.2);
+    }
+
+    particleRefs.current.forEach((particle, index) => {
+      if (!particle) {
+        return;
+      }
+
+      const seed = burnParticles[index];
+      const progress = MathUtils.clamp((elapsed - seed.delay) / (reducedMotion ? 1.1 : 2.7), 0, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const flicker = 0.78 + Math.sin(elapsed * 9 + index) * 0.22;
+
+      particle.position.set(
+        seed.start[0] + seed.drift[0] * eased,
+        seed.start[1] + seed.drift[1] * eased,
+        seed.start[2] + seed.drift[2] * eased,
+      );
+      particle.scale.setScalar(seed.size * (1 + eased * 1.65) * flicker);
+      particle.material.opacity = reducedMotion ? 0.18 * (1 - progress) : Math.sin(progress * Math.PI) * 0.54;
+    });
+  });
+
+  return (
+    <group renderOrder={6}>
+      <mesh ref={glowRef} position={[0, 0.305, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial
+          color="#ffd783"
+          transparent
+          opacity={0}
+          blending={AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+
+      {burnParticles.map((particle, index) => (
+        <mesh key={particle.id} ref={(node) => { particleRefs.current[index] = node; }} position={particle.start}>
+          <sphereGeometry args={[1, 9, 9]} />
+          <meshBasicMaterial
+            color={particle.color}
+            transparent
+            opacity={0}
+            blending={AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+
+      <Sparkles count={42} scale={[3.1, 1.15, 2.1]} size={3.2} speed={0.42} color="#ffe6a7" opacity={0.45} />
+    </group>
+  );
+}
+
+function SecretUnlockMark({ disabled, unlocked, onUnlockRequest }) {
+  const [hovered, setHovered] = useState(false);
+  useCursor(!disabled && hovered, 'pointer', 'auto');
+  const markColor = unlocked ? '#ffe6a7' : '#ffd783';
+  const markEmissive = unlocked ? '#ff8fae' : '#f0a35b';
+  const textColor = unlocked ? '#8a2445' : '#7c2f45';
+
+  return (
+    <group
+      position={[1.22, 0.36, -0.62]}
+      rotation={[-Math.PI / 2, 0, 0.03]}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!disabled) {
+          onUnlockRequest();
+        }
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        setHovered(true);
+      }}
+      onPointerOut={() => setHovered(false)}
+    >
+      <mesh position={[0, 0, 0.045]} renderOrder={8}>
+        <circleGeometry args={[0.28, 48]} />
+        <meshBasicMaterial color="#ffd783" transparent opacity={0.002} depthWrite={false} />
+      </mesh>
+      <mesh>
+        <circleGeometry args={[hovered ? 0.16 : 0.13, 46]} />
+        <meshStandardMaterial
+          color={markColor}
+          emissive={markEmissive}
+          emissiveIntensity={hovered ? 1.25 : unlocked ? 0.84 : 0.62}
+          transparent
+          opacity={hovered ? 0.88 : unlocked ? 0.78 : 0.68}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.01]}>
+        <ringGeometry args={[0.19, 0.215, 52]} />
+        <meshBasicMaterial color="#fff2bd" transparent opacity={hovered ? 0.42 : 0.24} depthWrite={false} />
+      </mesh>
+      <Sparkles count={hovered ? 30 : unlocked ? 22 : 16} scale={[0.6, 0.16, 0.6]} size={1.7} speed={0.28} color={unlocked ? '#ffcedc' : '#ffe6a7'} />
+      <Text position={[0, 0.005, 0.018]} fontSize={unlocked ? 0.064 : 0.075} color={textColor} anchorX="center" anchorY="middle" raycast={() => null}>
+        {unlocked ? 'replay' : 'secret'}
+      </Text>
+    </group>
+  );
+}
+
 function BookModel({
   isClosed,
   leftPage,
@@ -81,11 +219,11 @@ function BookModel({
   canGoPrevious,
   canGoNext,
   coverAwakened,
-  coverFormed,
   magicEvent,
   reducedMotion,
+  isSecretRevealing,
+  isBookDissolved,
   onAwakenCover,
-  onCoverFormed,
   onOpen,
   onClose,
   onNextPage,
@@ -103,15 +241,21 @@ function BookModel({
   const actionableHover = bookHovered || coverHovered;
   const baseScale = size.width < 720 ? 0.68 : 1.18;
   const targetScale = bookHovered && isClosed ? baseScale * 1.035 : baseScale;
+  const dissolvingScale = isSecretRevealing ? baseScale * 0.32 : targetScale;
   const targetCoverRotation = isClosed ? 0 : Math.PI * 0.84;
 
   useCursor(actionableHover, 'pointer', 'auto');
 
   useFrame((_, delta) => {
     if (rootRef.current) {
-      const scale = MathUtils.damp(rootRef.current.scale.x, targetScale, 6, delta);
+      const scale = MathUtils.damp(rootRef.current.scale.x, dissolvingScale, isSecretRevealing ? 1.7 : 6, delta);
       rootRef.current.scale.setScalar(scale);
-      rootRef.current.position.y = MathUtils.damp(rootRef.current.position.y, bookHovered && isClosed ? 0.045 : 0, 5, delta);
+      rootRef.current.position.y = MathUtils.damp(
+        rootRef.current.position.y,
+        isSecretRevealing ? 0.4 : bookHovered && isClosed ? 0.045 : 0,
+        isSecretRevealing ? 1.6 : 5,
+        delta,
+      );
     }
 
     if (coverPivotRef.current) {
@@ -119,17 +263,21 @@ function BookModel({
     }
   });
 
+  if (isBookDissolved) {
+    return null;
+  }
+
   const handleBookClick = (event) => {
     event.stopPropagation();
     onSceneInteract?.();
 
+    if (isSecretRevealing) {
+      return;
+    }
+
     if (isClosed) {
       if (!coverAwakened) {
         onAwakenCover();
-        return;
-      }
-
-      if (!coverFormed) {
         return;
       }
 
@@ -138,14 +286,8 @@ function BookModel({
       return;
     }
 
-    if (event.point.x < -0.08 && canGoPrevious) {
-      onPreviousPage();
-      return;
-    }
-
-    if (event.point.x > 0.08 && canGoNext) {
-      onNextPage();
-    }
+    // Open-book page navigation is intentionally handled only by
+    // PageTurnControls hit areas aligned to the paper pages.
   };
 
   return (
@@ -187,9 +329,12 @@ function BookModel({
         {!isClosed ? (
           <>
             <mesh
-              position={[-1.63, 0.34, 0]}
+              position={[-1.92, 0.34, 0]}
               onClick={(event) => {
                 event.stopPropagation();
+                if (isSecretRevealing) {
+                  return;
+                }
                 onSceneInteract?.();
                 onClose();
               }}
@@ -199,38 +344,40 @@ function BookModel({
               }}
               onPointerOut={() => setCoverHovered(false)}
             >
-              <boxGeometry args={[1.2, 0.36, 2.42]} />
+              <boxGeometry args={[0.64, 0.36, 2.42]} />
               <meshBasicMaterial color="#ff8baa" transparent opacity={0.01} depthWrite={false} />
             </mesh>
 
             <BookPage
               page={leftPage}
               side="left"
-              secretUnlocked={secretUnlocked}
-              onUnlockRequest={onUnlockRequest}
               onMemoryOpen={onMemoryOpen}
             />
             <BookPage
               page={rightPage}
               side="right"
-              secretUnlocked={secretUnlocked}
-              onUnlockRequest={onUnlockRequest}
               onMemoryOpen={onMemoryOpen}
             />
+            {!isSecretRevealing ? (
+              <SecretUnlockMark unlocked={secretUnlocked} disabled={isSecretRevealing} onUnlockRequest={onUnlockRequest} />
+            ) : null}
             <PageTurnSheet pageIndex={pageIndex} isClosed={isClosed} />
-            <PageTurnControls
-              canGoPrevious={canGoPrevious}
-              canGoNext={canGoNext}
-              onPreviousPage={() => {
-                onSceneInteract?.();
-                onPreviousPage();
-              }}
-              onNextPage={() => {
-                onSceneInteract?.();
-                onNextPage();
-              }}
-            />
+            {!isSecretRevealing ? (
+              <PageTurnControls
+                canGoPrevious={canGoPrevious}
+                canGoNext={canGoNext}
+                onPreviousPage={() => {
+                  onSceneInteract?.();
+                  onPreviousPage();
+                }}
+                onNextPage={() => {
+                  onSceneInteract?.();
+                  onNextPage();
+                }}
+              />
+            ) : null}
             <MagicPageEffect event={magicEvent} reducedMotion={reducedMotion} />
+            {isSecretRevealing ? <BookBurnEffect reducedMotion={reducedMotion} /> : null}
           </>
         ) : null}
 
@@ -240,6 +387,9 @@ function BookModel({
           onClick={(event) => {
             if (!isClosed) {
               event.stopPropagation();
+              if (isSecretRevealing) {
+                return;
+              }
               onSceneInteract?.();
               onClose();
             }
@@ -265,8 +415,12 @@ function BookModel({
             hovered={coverHovered || (bookHovered && isClosed)}
             openBurstKey={coverBurstKey}
             reducedMotion={reducedMotion}
-            onFormed={onCoverFormed}
           />
+
+          <mesh position={[1.62, 0.152, 0]} renderOrder={9}>
+            <boxGeometry args={[3.08, 0.036, 2.14]} />
+            <meshBasicMaterial color="#ffd783" transparent opacity={0.001} depthWrite={false} />
+          </mesh>
         </group>
 
         {bookHovered && isClosed ? (
@@ -275,6 +429,21 @@ function BookModel({
 
         {secretUnlocked ? (
           <Sparkles count={76} scale={[3.4, 1.1, 2.4]} size={3.2} speed={0.33} color="#ffe6a7" />
+        ) : null}
+
+        {isClosed ? (
+          <mesh
+            position={[0, 0.12, 0]}
+            onClick={handleBookClick}
+            onPointerOver={(event) => {
+              event.stopPropagation();
+              setBookHovered(true);
+            }}
+            onPointerOut={() => setBookHovered(false)}
+          >
+            <boxGeometry args={[3.9, 1.16, 2.72]} />
+            <meshBasicMaterial color="#ffd783" transparent opacity={0.001} depthWrite={false} />
+          </mesh>
         ) : null}
       </group>
     </Float>
@@ -358,11 +527,11 @@ function BirthdayBookScene({
   canGoPrevious,
   canGoNext,
   coverAwakened,
-  coverFormed,
   magicEvent,
   reducedMotion,
+  isSecretRevealing,
+  isBookDissolved,
   onAwakenCover,
-  onCoverFormed,
   onOpen,
   onClose,
   onNextPage,
@@ -396,11 +565,11 @@ function BirthdayBookScene({
         canGoPrevious={canGoPrevious}
         canGoNext={canGoNext}
         coverAwakened={coverAwakened}
-        coverFormed={coverFormed}
         magicEvent={magicEvent}
         reducedMotion={reducedMotion}
+        isSecretRevealing={isSecretRevealing}
+        isBookDissolved={isBookDissolved}
         onAwakenCover={onAwakenCover}
-        onCoverFormed={onCoverFormed}
         onOpen={onOpen}
         onClose={onClose}
         onNextPage={onNextPage}
@@ -412,6 +581,7 @@ function BirthdayBookScene({
       <ContactShadows position={[0, -0.24, 0]} opacity={0.18} scale={5.2} blur={3.8} far={1.4} />
       <OrbitControls
         ref={controlsRef}
+        enabled={!isSecretRevealing && !isBookDissolved}
         enableRotate
         enableZoom
         enablePan={false}

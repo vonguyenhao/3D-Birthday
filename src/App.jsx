@@ -5,7 +5,9 @@ import UnlockModal from './components/UnlockModal.jsx';
 import CelebrationEffects from './components/CelebrationEffects.jsx';
 import MusicControl from './components/MusicControl.jsx';
 import ImageLightbox from './components/ImageLightbox.jsx';
+import SecretRevealScene from './components/SecretRevealScene.jsx';
 import { normalizeMessageText, paginateText } from './utils/paginateText.js';
+import { normalizeDisplayText } from './utils/text.js';
 
 const GREETING_MESSAGE = `Wishing you happiness, love, health, and many beautiful moments ahead.
 
@@ -18,26 +20,14 @@ const MEMORY_MESSAGE = `A tiny memory page is tucked into the book.
 Tap the golden sparkles to open optional photos. You can replace these placeholders with your own images whenever the gift is ready.`;
 
 const createGreetingPages = () =>
-  paginateText(GREETING_MESSAGE, {
+  paginateText(normalizeDisplayText(GREETING_MESSAGE), {
     maxChars: 300,
     maxLines: 8,
-    maxLineLength: 34,
+    maxLineLength: 38,
   }).map((text, index) => ({
     id: `greeting-${index}`,
     type: 'greeting',
     title: index === 0 ? 'Happy Birthday' : 'A wish continued',
-    text,
-  }));
-
-const createSecretPages = (message) =>
-  paginateText(message, {
-    maxChars: 330,
-    maxLines: 9,
-    maxLineLength: 36,
-  }).map((text, index) => ({
-    id: `secret-${index}`,
-    type: 'secret',
-    title: index === 0 ? 'Secret Birthday Page' : `Secret Page ${index + 1}`,
     text,
   }));
 
@@ -50,12 +40,14 @@ function App() {
   const [activeImage, setActiveImage] = useState(null);
   const [sceneInteracted, setSceneInteracted] = useState(false);
   const [coverAwakened, setCoverAwakened] = useState(false);
-  const [coverFormed, setCoverFormed] = useState(false);
+  const [revealStage, setRevealStage] = useState('idle');
   const [magicEvent, setMagicEvent] = useState(null);
-  const [secretPageSeen, setSecretPageSeen] = useState(false);
   const magicEventId = useRef(0);
+  const revealReturnPageIndexRef = useRef(0);
   const prefersReducedMotion = useReducedMotion();
   const secretUnlocked = Boolean(secretMessage);
+  const isSecretRevealing = revealStage === 'burning';
+  const isBookDissolved = revealStage === 'message';
 
   const triggerMagic = (type) => {
     magicEventId.current += 1;
@@ -63,13 +55,13 @@ function App() {
   };
 
   const pages = useMemo(() => {
-    const basePages = [
+    return [
       ...createGreetingPages(),
       {
         id: 'memory-1',
         type: 'memory',
         title: 'Memory Sparks',
-        text: MEMORY_MESSAGE,
+        text: normalizeDisplayText(MEMORY_MESSAGE),
         hotspots: [
           {
             id: 'memory-photo-1',
@@ -91,43 +83,41 @@ function App() {
           },
         ],
       },
-      {
-        id: 'locked-secret',
-        type: 'lockedSecretHint',
-        title: secretUnlocked ? 'Hidden pages unlocked' : 'A Hidden Page',
-        text: secretUnlocked
-          ? 'The lock has opened. The secret birthday pages are ready.'
-          : 'A tiny golden lock is glowing on this page. Tap it when you are ready for the private questions.',
-      },
     ];
+  }, []);
 
-    if (!secretUnlocked) {
-      return basePages;
-    }
-
-    return [...basePages, ...createSecretPages(normalizeMessageText(secretMessage))];
-  }, [secretMessage, secretUnlocked]);
-
-  const safePageIndex = Math.min(currentPageIndex, Math.max(0, pages.length - 1));
+  const maxPageStartIndex = pages.length <= 1 ? 0 : pages.length % 2 === 0 ? pages.length - 2 : pages.length - 1;
+  const clampPageIndex = useCallback(
+    (pageIndex) => {
+      const evenPageIndex = Math.max(0, pageIndex - (pageIndex % 2));
+      return Math.min(evenPageIndex, maxPageStartIndex);
+    },
+    [maxPageStartIndex],
+  );
+  const safePageIndex = clampPageIndex(currentPageIndex);
   const leftPage = isClosed ? null : pages[safePageIndex];
   const rightPage = isClosed ? null : pages[safePageIndex + 1] || null;
   const canGoPrevious = !isClosed && safePageIndex > 0;
-  const canGoNext = !isClosed && safePageIndex + 2 < pages.length;
+  const canGoNext = !isClosed && safePageIndex < maxPageStartIndex;
 
   useEffect(() => {
     if (safePageIndex !== currentPageIndex) {
-      setCurrentPageIndex(safePageIndex - (safePageIndex % 2));
+      setCurrentPageIndex(safePageIndex);
     }
   }, [currentPageIndex, safePageIndex]);
 
   useEffect(() => {
-    const spreadHasSecret = leftPage?.type === 'secret' || rightPage?.type === 'secret';
-
-    if (!isClosed && spreadHasSecret && !secretPageSeen) {
-      setSecretPageSeen(true);
-      triggerMagic('secret-reveal');
+    if (revealStage !== 'burning') {
+      return undefined;
     }
-  }, [isClosed, leftPage?.type, rightPage?.type, secretPageSeen]);
+
+    const revealTimer = window.setTimeout(
+      () => setRevealStage('message'),
+      prefersReducedMotion ? 950 : 3400,
+    );
+
+    return () => window.clearTimeout(revealTimer);
+  }, [prefersReducedMotion, revealStage]);
 
   const openBook = () => {
     setSceneInteracted(true);
@@ -137,13 +127,21 @@ function App() {
 
   const awakenCover = () => {
     setSceneInteracted(true);
-    setCoverFormed(false);
     setCoverAwakened(true);
   };
 
-  const markCoverFormed = useCallback(() => {
-    setCoverFormed(true);
-  }, []);
+  const activateClosedBook = () => {
+    if (!isClosed || isSecretRevealing || isBookDissolved) {
+      return;
+    }
+
+    if (!coverAwakened) {
+      awakenCover();
+      return;
+    }
+
+    openBook();
+  };
 
   const closeBook = () => {
     setSceneInteracted(true);
@@ -152,27 +150,41 @@ function App() {
   };
 
   const goNext = () => {
-    if (!canGoNext) {
+    if (!canGoNext || isSecretRevealing || isBookDissolved) {
       return;
     }
 
     setSceneInteracted(true);
     triggerMagic('turn-next');
-    setCurrentPageIndex((pageIndex) => Math.min(pageIndex + 2, pages.length - 1));
+    setCurrentPageIndex((pageIndex) => clampPageIndex(pageIndex + 2));
   };
 
   const goPrevious = () => {
-    if (!canGoPrevious) {
+    if (!canGoPrevious || isSecretRevealing || isBookDissolved) {
       return;
     }
 
     setSceneInteracted(true);
     triggerMagic('turn-previous');
-    setCurrentPageIndex((pageIndex) => Math.max(pageIndex - 2, 0));
+    setCurrentPageIndex((pageIndex) => clampPageIndex(pageIndex - 2));
   };
 
   const requestUnlock = () => {
+    if (isSecretRevealing || isBookDissolved) {
+      return;
+    }
+
     setSceneInteracted(true);
+    setIsClosed(false);
+
+    if (secretUnlocked) {
+      revealReturnPageIndexRef.current = safePageIndex;
+      setUnlockOpen(false);
+      setRevealStage('burning');
+      triggerMagic('unlock');
+      return;
+    }
+
     setUnlockOpen(true);
   };
 
@@ -181,10 +193,20 @@ function App() {
 
     setSecretMessage(normalizeMessageText(message));
     setUnlockToken(typeof result === 'object' && result?.unlockToken ? result.unlockToken : '');
-    setSecretPageSeen(false);
     setUnlockOpen(false);
+    revealReturnPageIndexRef.current = safePageIndex;
+    setIsClosed(false);
+    setRevealStage('burning');
     triggerMagic('unlock');
   };
+
+  const closeSecretReveal = useCallback(() => {
+    setSceneInteracted(true);
+    setUnlockOpen(false);
+    setRevealStage('idle');
+    setIsClosed(false);
+    setCurrentPageIndex(clampPageIndex(revealReturnPageIndexRef.current));
+  }, [clampPageIndex]);
 
   const openMemoryImage = async (fallbackImage) => {
     if (!unlockToken) {
@@ -221,7 +243,7 @@ function App() {
   return (
     <main className="app-shell">
       <h1 className="screen-reader-title">3D Birthday Book</h1>
-      <CelebrationEffects active={secretUnlocked} reducedMotion={prefersReducedMotion} />
+      <CelebrationEffects active={secretUnlocked && revealStage === 'idle'} reducedMotion={prefersReducedMotion} />
 
       <section className="book-experience" aria-label="Fullscreen 3D birthday book">
         <BirthdayBookScene
@@ -233,11 +255,11 @@ function App() {
           canGoPrevious={canGoPrevious}
           canGoNext={canGoNext}
           coverAwakened={coverAwakened}
-          coverFormed={coverFormed}
           magicEvent={magicEvent}
           reducedMotion={prefersReducedMotion}
+          isSecretRevealing={isSecretRevealing}
+          isBookDissolved={isBookDissolved}
           onAwakenCover={awakenCover}
-          onCoverFormed={markCoverFormed}
           onOpen={openBook}
           onClose={closeBook}
           onNextPage={goNext}
@@ -246,7 +268,46 @@ function App() {
           onMemoryOpen={openMemoryImage}
           onSceneInteract={() => setSceneInteracted(true)}
         />
+        {isClosed && !isSecretRevealing && !isBookDissolved ? (
+          <button
+            className="closed-book-hit-button"
+            type="button"
+            aria-label={coverAwakened ? 'Open the birthday book' : 'Awaken the birthday book cover'}
+            onClick={activateClosedBook}
+          />
+        ) : null}
+        {!isClosed && revealStage === 'idle' && !unlockOpen ? (
+          <>
+            <button
+              className="book-page-hit-button left"
+              type="button"
+              aria-label="Turn to the previous page"
+              disabled={!canGoPrevious}
+              onClick={goPrevious}
+            />
+            <button
+              className="book-page-hit-button right"
+              type="button"
+              aria-label="Turn to the next page"
+              disabled={!canGoNext}
+              onClick={goNext}
+            />
+            <button
+              className="book-secret-hit-button"
+              type="button"
+              aria-label={secretUnlocked ? 'Replay the secret message' : 'Open the hidden secret letter'}
+              onClick={requestUnlock}
+            />
+          </>
+        ) : null}
       </section>
+
+      <SecretRevealScene
+        stage={revealStage}
+        message={secretMessage}
+        reducedMotion={prefersReducedMotion}
+        onClose={closeSecretReveal}
+      />
 
       <div className="top-controls" aria-label="Scene controls">
         <MusicControl />

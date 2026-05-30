@@ -6,9 +6,20 @@ dist
 .DS_Store
 *.log
 verification-screenshots/
+.tmp-chrome-profile*/
+.tmp-edge-profile/
+debug*.png
+debug2*.png
+debug3*.png
+debug4*.png
+debug5*.png
+verify*.png
+final-verify*.png
+domverify*.png
 
 # Public placeholder docs are tracked, but real media should not be committed by accident.
 public/audio/*
 !public/audio/README.md
+!public/audio/background-music.mp3
 public/images/memories/*
 !public/images/memories/README.md
