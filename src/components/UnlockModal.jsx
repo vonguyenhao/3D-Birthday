@@ -237,7 +237,7 @@ function UnlockModal({ isOpen, onClose, onUnlocked }) {
                           value={answers[question.name]}
                           onChange={updateAnswer}
                           autoComplete="off"
-                          placeholder={t('Viết câu trả lời ở đây...')}
+                          placeholder={t('Điền vào đây giúp tôi nha cô...')}
                           disabled={isSubmitting || letterPhase === 'success'}
                           required
                         />
@@ -251,7 +251,7 @@ function UnlockModal({ isOpen, onClose, onUnlocked }) {
                         {t(error)}
                       </p>
                     ) : (
-                      <p className="form-note">{t('Có thể viết hoa hoặc thường, không có dấu nha em')}</p>
+                      <p className="form-note">{t('Có thể viết hoa hoặc thường, không có dấu nha em :)')}</p>
                     )}
 
                     <button className="submit-button letter-action" type="submit" disabled={isSubmitting || letterPhase === 'success'}>

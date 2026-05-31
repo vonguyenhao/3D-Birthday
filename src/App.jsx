@@ -4,7 +4,6 @@ import BirthdayBookScene from './components/BirthdayBookScene.jsx';
 import UnlockModal from './components/UnlockModal.jsx';
 import CelebrationEffects from './components/CelebrationEffects.jsx';
 import MusicControl from './components/MusicControl.jsx';
-import ImageLightbox from './components/ImageLightbox.jsx';
 import SecretRevealScene from './components/SecretRevealScene.jsx';
 import { normalizeMessageText, paginateText } from './utils/paginateText.js';
 import { normalizeDisplayText } from './utils/text.js';
@@ -13,11 +12,7 @@ const GREETING_MESSAGE = `Wishing you happiness, love, health, and many beautifu
 
 May every quiet wish find its way to you, and may this year feel softer, brighter, and full of little reasons to smile.
 
-This book keeps a simple birthday wish first, then a few private pages that only open when the right memories are remembered.`;
-
-const MEMORY_MESSAGE = `A tiny memory page is tucked into the book.
-
-Tap the golden sparkles to open optional photos. You can replace these placeholders with your own images whenever the gift is ready.`;
+Cuốn sách này có một ngăn bí mật, nhưng anh chưa biết được làm sao để mở nó. Em giúp anh nhé! `;
 
 const createGreetingPages = () =>
   paginateText(normalizeDisplayText(GREETING_MESSAGE), {
@@ -31,13 +26,66 @@ const createGreetingPages = () =>
     text,
   }));
 
+const getMemoryPageText = (status) => {
+  if (status === 'loading') {
+    return 'Bình tĩnh đang load xíu, đợi tí nhen...';
+  }
+
+  if (status === 'no-token') {
+    return 'Oi thoi chét';
+  }
+
+  if (status === 'error') {
+    return 'The memories could not be loaded right now.';
+  }
+
+  if (status === 'ready') {
+    return 'Chà, mấy cái ảnh đang load đó nha, đợi anh tí';
+  }
+
+  return 'No private memories added yet.';
+};
+
+const createMemoryPages = (images, status) => {
+  const memoryIntro = {
+    id: 'memory-intro',
+    type: 'memory',
+    layout: 'memory-note',
+    title: 'Memory Sparks',
+    text: getMemoryPageText(status),
+  };
+
+  if (status === 'loading') {
+    return [memoryIntro];
+  }
+
+  if (status !== 'ready' || !images.length) {
+    return [memoryIntro];
+  }
+
+  const photoPages = [];
+
+  for (let index = 0; index < images.length; index += 2) {
+    photoPages.push({
+      id: `memory-photos-${index / 2}`,
+      type: 'memory',
+      layout: 'memory-photos',
+      title: index === 0 ? 'Memory Sparks' : 'More Little Memories',
+      photos: images.slice(index, index + 2),
+    });
+  }
+
+  return [memoryIntro, ...photoPages];
+};
+
 function App() {
   const [isClosed, setIsClosed] = useState(true);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [secretMessage, setSecretMessage] = useState('');
   const [unlockToken, setUnlockToken] = useState('');
-  const [activeImage, setActiveImage] = useState(null);
+  const [memoryImages, setMemoryImages] = useState([]);
+  const [memoryImagesStatus, setMemoryImagesStatus] = useState('locked');
   const [sceneInteracted, setSceneInteracted] = useState(false);
   const [coverAwakened, setCoverAwakened] = useState(false);
   const [revealStage, setRevealStage] = useState('idle');
@@ -55,36 +103,14 @@ function App() {
   };
 
   const pages = useMemo(() => {
-    return [
-      ...createGreetingPages(),
-      {
-        id: 'memory-1',
-        type: 'memory',
-        title: 'Memory Sparks',
-        text: normalizeDisplayText(MEMORY_MESSAGE),
-        hotspots: [
-          {
-            id: 'memory-photo-1',
-            offset: [-0.34, 0.52],
-            image: {
-              src: '/images/memories/memory-1.jpg',
-              alt: 'Birthday memory one',
-              caption: 'Replace this placeholder with a real memory image.',
-            },
-          },
-          {
-            id: 'memory-photo-2',
-            offset: [0.36, -0.36],
-            image: {
-              src: '/images/memories/memory-2.jpg',
-              alt: 'Birthday memory two',
-              caption: 'Optional memory photos live in public/images/memories/.',
-            },
-          },
-        ],
-      },
-    ];
-  }, []);
+    const greetingPages = createGreetingPages();
+
+    if (!secretUnlocked) {
+      return greetingPages;
+    }
+
+    return [...greetingPages, ...createMemoryPages(memoryImages, memoryImagesStatus)];
+  }, [memoryImages, memoryImagesStatus, secretUnlocked]);
 
   const maxPageStartIndex = pages.length <= 1 ? 0 : pages.length % 2 === 0 ? pages.length - 2 : pages.length - 1;
   const clampPageIndex = useCallback(
@@ -118,6 +144,66 @@ function App() {
 
     return () => window.clearTimeout(revealTimer);
   }, [prefersReducedMotion, revealStage]);
+
+  useEffect(() => {
+    if (!secretUnlocked) {
+      setMemoryImages([]);
+      setMemoryImagesStatus('locked');
+      return undefined;
+    }
+
+    if (!unlockToken) {
+      setMemoryImages([]);
+      setMemoryImagesStatus('no-token');
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    const loadMemoryImages = async () => {
+      setMemoryImagesStatus('loading');
+      setMemoryImages([]);
+
+      try {
+        const response = await fetch(`/api/memory-images?token=${encodeURIComponent(unlockToken)}`, {
+          signal: controller.signal,
+        });
+        const result = await response.json();
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        if (!response.ok || !result.success) {
+          setMemoryImagesStatus('error');
+          return;
+        }
+
+        if (!result.configured || !result.images?.length) {
+          setMemoryImagesStatus('empty');
+          return;
+        }
+
+        const images = result.images.map((image, index) => ({
+          id: image.id || image.pathname || `memory-${index}`,
+          src: `/api/memory-image?token=${encodeURIComponent(unlockToken)}&pathname=${encodeURIComponent(image.pathname)}`,
+          alt: image.filename ? `Private memory ${index + 1}` : 'Private birthday memory',
+          caption: image.filename ? `Memory ${index + 1}` : '',
+        }));
+
+        setMemoryImages(images);
+        setMemoryImagesStatus(images.length ? 'ready' : 'empty');
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setMemoryImagesStatus('error');
+        }
+      }
+    };
+
+    loadMemoryImages();
+
+    return () => controller.abort();
+  }, [secretUnlocked, unlockToken]);
 
   const openBook = () => {
     setSceneInteracted(true);
@@ -208,38 +294,6 @@ function App() {
     setCurrentPageIndex(clampPageIndex(revealReturnPageIndexRef.current));
   }, [clampPageIndex]);
 
-  const openMemoryImage = async (fallbackImage) => {
-    if (!unlockToken) {
-      setActiveImage(fallbackImage);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/memory-images?token=${encodeURIComponent(unlockToken)}`);
-      const result = await response.json();
-
-      if (!response.ok || !result.success || !result.configured || !result.images?.length) {
-        setActiveImage({
-          ...fallbackImage,
-          caption: result.message || fallbackImage.caption || 'Private memory images are not available yet.',
-        });
-        return;
-      }
-
-      const selectedImage = result.images[0];
-      setActiveImage({
-        src: `/api/memory-image?token=${encodeURIComponent(unlockToken)}&pathname=${encodeURIComponent(selectedImage.pathname)}`,
-        alt: selectedImage.filename || 'Private birthday memory',
-        caption: 'Private memory image unlocked for this session.',
-      });
-    } catch {
-      setActiveImage({
-        ...fallbackImage,
-        caption: 'Private memory images could not be loaded right now.',
-      });
-    }
-  };
-
   return (
     <main className="app-shell">
       <h1 className="screen-reader-title">3D Birthday Book</h1>
@@ -265,7 +319,6 @@ function App() {
           onNextPage={goNext}
           onPreviousPage={goPrevious}
           onUnlockRequest={requestUnlock}
-          onMemoryOpen={openMemoryImage}
           onSceneInteract={() => setSceneInteracted(true)}
         />
         {isClosed && !isSecretRevealing && !isBookDissolved ? (
@@ -328,7 +381,6 @@ function App() {
       </AnimatePresence>
 
       <UnlockModal isOpen={unlockOpen} onClose={() => setUnlockOpen(false)} onUnlocked={revealSecretMessage} />
-      <ImageLightbox image={activeImage} onClose={() => setActiveImage(null)} />
     </main>
   );
 }

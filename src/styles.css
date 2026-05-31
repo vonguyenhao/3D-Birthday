@@ -169,12 +169,16 @@ button:disabled {
 .top-controls,
 .scene-hint {
   position: absolute;
-  z-index: 5;
 }
 
 .top-controls {
   top: max(18px, env(safe-area-inset-top));
   right: max(18px, env(safe-area-inset-right));
+  z-index: 9;
+}
+
+.scene-hint {
+  z-index: 5;
 }
 
 .scene-hint {
@@ -894,6 +898,7 @@ input:focus-visible {
   display: grid;
   place-items: center;
   padding: clamp(18px, 4vw, 48px);
+  padding-bottom: max(88px, env(safe-area-inset-bottom));
   pointer-events: none;
   overflow: hidden;
   background:
@@ -953,14 +958,16 @@ input:focus-visible {
 
 .secret-reveal-controls {
   position: fixed;
-  top: max(18px, env(safe-area-inset-top));
-  right: max(18px, env(safe-area-inset-right));
+  left: 50%;
+  right: auto;
+  bottom: max(18px, env(safe-area-inset-bottom));
   z-index: 3;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 10px;
-  max-width: min(92vw, 520px);
+  width: min(92vw, 620px);
+  transform: translateX(-50%);
 }
 
 .secret-reveal-button {
@@ -1086,89 +1093,6 @@ input:focus-visible {
   color: rgba(255, 241, 201, 0.68);
   font-size: 0.78rem;
   letter-spacing: 0.06em;
-}
-
-.lightbox-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 24;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  background: rgba(2, 3, 12, 0.72);
-  backdrop-filter: blur(12px);
-}
-
-.lightbox-panel {
-  position: relative;
-  width: min(760px, 100%);
-  max-height: min(88vh, 760px);
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid rgba(255, 238, 205, 0.25);
-  border-radius: 8px;
-  background: rgba(12, 10, 25, 0.9);
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.56);
-}
-
-.lightbox-panel img {
-  display: block;
-  width: 100%;
-  max-height: 68vh;
-  object-fit: contain;
-  border-radius: 6px;
-  background: rgba(255, 248, 233, 0.08);
-}
-
-.lightbox-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 1;
-}
-
-.image-fallback {
-  min-height: 220px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 8px;
-  padding: 24px;
-  border: 1px dashed rgba(255, 215, 131, 0.32);
-  border-radius: 6px;
-  color: var(--cream);
-  text-align: center;
-  background: rgba(255, 248, 233, 0.06);
-}
-
-.image-fallback p,
-.lightbox-caption {
-  margin: 0;
-  color: rgba(255, 248, 233, 0.76);
-  line-height: 1.5;
-}
-
-.memory-hotspot-html {
-  pointer-events: auto;
-}
-
-.memory-hotspot-button {
-  width: 34px;
-  height: 34px;
-  border: 1px solid rgba(255, 238, 181, 0.55);
-  border-radius: 999px;
-  color: #7b4b22;
-  background: rgba(255, 216, 131, 0.34);
-  font-size: 0.92rem;
-  font-weight: 900;
-  line-height: 1;
-  box-shadow: 0 0 22px rgba(255, 216, 131, 0.32);
-  backdrop-filter: blur(5px);
-}
-
-.memory-hotspot-button:hover {
-  background: rgba(255, 216, 131, 0.5);
 }
 
 @keyframes twinkle {
@@ -1336,13 +1260,13 @@ input:focus-visible {
   }
 
   .secret-reveal-layer {
-    padding: 74px 16px 28px;
+    padding: 74px 16px 86px;
   }
 
   .secret-reveal-controls {
-    top: max(12px, env(safe-area-inset-top));
-    right: max(10px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
     gap: 8px;
+    width: min(94vw, 420px);
   }
 
   .secret-reveal-button {

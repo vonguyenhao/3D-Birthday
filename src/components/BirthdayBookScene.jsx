@@ -229,7 +229,6 @@ function BookModel({
   onNextPage,
   onPreviousPage,
   onUnlockRequest,
-  onMemoryOpen,
   onSceneInteract,
 }) {
   const rootRef = useRef();
@@ -351,12 +350,10 @@ function BookModel({
             <BookPage
               page={leftPage}
               side="left"
-              onMemoryOpen={onMemoryOpen}
             />
             <BookPage
               page={rightPage}
               side="right"
-              onMemoryOpen={onMemoryOpen}
             />
             {!isSecretRevealing ? (
               <SecretUnlockMark unlocked={secretUnlocked} disabled={isSecretRevealing} onUnlockRequest={onUnlockRequest} />
@@ -537,7 +534,6 @@ function BirthdayBookScene({
   onNextPage,
   onPreviousPage,
   onUnlockRequest,
-  onMemoryOpen,
   onSceneInteract,
 }) {
   const controlsRef = useRef();
@@ -575,7 +571,6 @@ function BirthdayBookScene({
         onNextPage={onNextPage}
         onPreviousPage={onPreviousPage}
         onUnlockRequest={onUnlockRequest}
-        onMemoryOpen={onMemoryOpen}
         onSceneInteract={onSceneInteract}
       />
       <ContactShadows position={[0, -0.24, 0]} opacity={0.18} scale={5.2} blur={3.8} far={1.4} />
