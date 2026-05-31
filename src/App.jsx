@@ -40,7 +40,7 @@ const getMemoryPageText = (status) => {
   }
 
   if (status === 'ready') {
-    return 'Chà, mấy cái ảnh đang load đó nha, đợi anh tí';
+    return 'Mindil Beach Sunset Markets - 10/05/2026';
   }
 
   return 'No private memories added yet.';
