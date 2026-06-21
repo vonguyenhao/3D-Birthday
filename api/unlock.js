@@ -28,6 +28,7 @@ export default function handler(request, response) {
   const expectedAnswer1 = process.env.SECRET_ANSWER_1;
   const expectedAnswer2 = process.env.SECRET_ANSWER_2;
   const secretMessage = process.env.SECRET_MESSAGE;
+  const apologyMessage = process.env.APOLOGY_LETTER_MESSAGE || process.env.SECOND_SECRET_MESSAGE || '';
 
   if (!expectedAnswer1 || !expectedAnswer2 || !secretMessage) {
     return response.status(500).json({
@@ -55,7 +56,9 @@ export default function handler(request, response) {
     const payload = {
       success: true,
       message: secretMessage,
+      apologyMessage,
     };
+
     const unlockToken = createUnlockToken(process.env.UNLOCK_TOKEN_SECRET);
 
     if (unlockToken) {

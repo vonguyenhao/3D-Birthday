@@ -83,6 +83,7 @@ function App() {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [secretMessage, setSecretMessage] = useState('');
+  const [apologyMessage, setApologyMessage] = useState('');
   const [unlockToken, setUnlockToken] = useState('');
   const [memoryImages, setMemoryImages] = useState([]);
   const [memoryImagesStatus, setMemoryImagesStatus] = useState('locked');
@@ -276,8 +277,11 @@ function App() {
 
   const revealSecretMessage = (result) => {
     const message = typeof result === 'string' ? result : result?.message;
+    const nextApologyMessage =
+      typeof result === 'object' && result?.apologyMessage ? result.apologyMessage : '';
 
     setSecretMessage(normalizeMessageText(message));
+    setApologyMessage(normalizeMessageText(nextApologyMessage));
     setUnlockToken(typeof result === 'object' && result?.unlockToken ? result.unlockToken : '');
     setUnlockOpen(false);
     revealReturnPageIndexRef.current = safePageIndex;
@@ -358,6 +362,7 @@ function App() {
       <SecretRevealScene
         stage={revealStage}
         message={secretMessage}
+        apologyMessage={apologyMessage}
         reducedMotion={prefersReducedMotion}
         onClose={closeSecretReveal}
       />

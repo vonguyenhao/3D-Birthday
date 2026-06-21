@@ -9,6 +9,14 @@ const SHORT_SECTION_DELAY_MS = 5600;
 const LONG_SECTION_DELAY_MS = 8200;
 const INTRO_DELAY_MS = 1200;
 const LINE_FADE_DURATION_MS = 600;
+const LETTER_ONE_CLOSE_WAIT_MS = 2400;
+const LETTER_ONE_FOLD_MS = 850;
+const SECOND_LETTER_START_DELAY_MS = 650;
+const SECOND_LETTER_LINE_DELAY_MS = 1650;
+const SECOND_LETTER_AFTER_READ_WAIT_MS = 6800;
+const SECOND_LETTER_BURN_MS = 3600;
+const SECOND_LETTER_REDUCED_READ_MS = 2600;
+const SECOND_LETTER_REDUCED_BURN_MS = 900;
 
 const wrapLongText = (text, limit = CHUNK_LENGTH) => {
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -99,15 +107,24 @@ const getRevealDelay = (lineCount) => {
   return REVEAL_CHUNK_DELAY_MS;
 };
 
-function SecretRevealScene({ stage, message, reducedMotion = false, onClose }) {
+function SecretRevealScene({ stage, message, apologyMessage, reducedMotion = false, onClose }) {
   const messageChunks = useMemo(() => splitMessageIntoChunks(message), [message]);
+  const secondLetterChunks = useMemo(() => splitMessageIntoChunks(apologyMessage), [apologyMessage]);
   const [visibleCount, setVisibleCount] = useState(0);
+  const [secondVisibleCount, setSecondVisibleCount] = useState(0);
+  const [letterPhase, setLetterPhase] = useState('letterOne');
   const [replayKey, setReplayKey] = useState(0);
   const [manualSection, setManualSection] = useState(null);
   const revealTimers = useRef({ startTimer: null, interval: null });
+  const letterTimers = useRef([]);
   const isMessageStage = stage === 'message' && messageChunks.length > 0;
   const isBurningStage = stage === 'burning';
   const isComplete = visibleCount >= messageChunks.length;
+  const isLetterOneVisible = isMessageStage && (letterPhase === 'letterOne' || letterPhase === 'letterOneClosing');
+  const isSecondLetterVisible =
+    isMessageStage &&
+    (letterPhase === 'letterTwoOpening' || letterPhase === 'letterTwoReading' || letterPhase === 'letterTwoBurning');
+  const secondVisibleLines = secondLetterChunks.slice(0, Math.min(secondVisibleCount, secondLetterChunks.length));
   const sectionCount = Math.max(1, Math.ceil(messageChunks.length / CHUNKS_PER_SECTION));
   const animatedSection = Math.max(0, Math.ceil(Math.max(visibleCount, 1) / CHUNKS_PER_SECTION) - 1);
   const activeSection = manualSection ?? animatedSection;
@@ -122,13 +139,31 @@ function SecretRevealScene({ stage, message, reducedMotion = false, onClose }) {
     revealTimers.current = { startTimer: null, interval: null };
   }, []);
 
+  const clearLetterTimers = useCallback(() => {
+    letterTimers.current.forEach((timer) => window.clearTimeout(timer));
+    letterTimers.current = [];
+  }, []);
+
+  const addLetterTimer = useCallback((callback, delay) => {
+    const timer = window.setTimeout(callback, delay);
+    letterTimers.current.push(timer);
+    return timer;
+  }, []);
+
   useEffect(() => {
     if (!isMessageStage) {
       clearRevealTimers();
+      clearLetterTimers();
       setVisibleCount(0);
+      setSecondVisibleCount(0);
       setManualSection(null);
+      setLetterPhase('letterOne');
       return undefined;
     }
+
+    clearLetterTimers();
+    setLetterPhase('letterOne');
+    setSecondVisibleCount(0);
 
     if (reducedMotion) {
       setVisibleCount(messageChunks.length);
@@ -162,7 +197,102 @@ function SecretRevealScene({ stage, message, reducedMotion = false, onClose }) {
     }, INTRO_DELAY_MS);
 
     return clearRevealTimers;
-  }, [clearRevealTimers, isMessageStage, messageChunks, reducedMotion, replayKey]);
+  }, [clearLetterTimers, clearRevealTimers, isMessageStage, messageChunks, reducedMotion, replayKey]);
+
+  useEffect(() => {
+    if (!isMessageStage || letterPhase !== 'letterOne' || !isComplete || !secondLetterChunks.length) {
+      return undefined;
+    }
+
+    clearLetterTimers();
+    addLetterTimer(() => setLetterPhase('letterOneClosing'), reducedMotion ? 650 : LETTER_ONE_CLOSE_WAIT_MS);
+
+    return clearLetterTimers;
+  }, [
+    addLetterTimer,
+    clearLetterTimers,
+    isComplete,
+    isMessageStage,
+    letterPhase,
+    reducedMotion,
+    secondLetterChunks.length,
+  ]);
+
+  useEffect(() => {
+    if (!isMessageStage || letterPhase !== 'letterOneClosing') {
+      return undefined;
+    }
+
+    clearLetterTimers();
+    addLetterTimer(() => setLetterPhase('letterTwoOpening'), reducedMotion ? 250 : LETTER_ONE_FOLD_MS);
+
+    return clearLetterTimers;
+  }, [addLetterTimer, clearLetterTimers, isMessageStage, letterPhase, reducedMotion]);
+
+  useEffect(() => {
+    if (!isMessageStage || letterPhase !== 'letterTwoOpening') {
+      return undefined;
+    }
+
+    clearLetterTimers();
+    addLetterTimer(() => setLetterPhase('letterTwoReading'), reducedMotion ? 150 : SECOND_LETTER_START_DELAY_MS);
+
+    return clearLetterTimers;
+  }, [addLetterTimer, clearLetterTimers, isMessageStage, letterPhase, reducedMotion]);
+
+  useEffect(() => {
+    if (!isMessageStage || letterPhase !== 'letterTwoReading' || !secondLetterChunks.length) {
+      return undefined;
+    }
+
+    clearLetterTimers();
+
+    if (reducedMotion) {
+      setSecondVisibleCount(secondLetterChunks.length);
+      addLetterTimer(() => setLetterPhase('letterTwoBurning'), SECOND_LETTER_REDUCED_READ_MS);
+      return clearLetterTimers;
+    }
+
+    let nextVisibleCount = 0;
+
+    const revealNextLine = () => {
+      nextVisibleCount += 1;
+      setSecondVisibleCount(Math.min(nextVisibleCount, secondLetterChunks.length));
+
+      if (nextVisibleCount < secondLetterChunks.length) {
+        addLetterTimer(revealNextLine, SECOND_LETTER_LINE_DELAY_MS);
+        return;
+      }
+
+      addLetterTimer(() => setLetterPhase('letterTwoBurning'), SECOND_LETTER_AFTER_READ_WAIT_MS);
+    };
+
+    setSecondVisibleCount(0);
+    addLetterTimer(revealNextLine, SECOND_LETTER_START_DELAY_MS);
+
+    return clearLetterTimers;
+  }, [
+    addLetterTimer,
+    clearLetterTimers,
+    isMessageStage,
+    letterPhase,
+    reducedMotion,
+    secondLetterChunks.length,
+  ]);
+
+  useEffect(() => {
+    if (!isMessageStage || letterPhase !== 'letterTwoBurning') {
+      return undefined;
+    }
+
+    clearLetterTimers();
+    addLetterTimer(() => {
+      setLetterPhase('lettersComplete');
+      onClose?.();
+    }, reducedMotion ? SECOND_LETTER_REDUCED_BURN_MS : SECOND_LETTER_BURN_MS);
+
+    return clearLetterTimers;
+  }, [addLetterTimer, clearLetterTimers, isMessageStage, letterPhase, onClose, reducedMotion]);
 
   useEffect(() => {
     if ((!isBurningStage && !isMessageStage) || !onClose) {
@@ -190,7 +320,10 @@ function SecretRevealScene({ stage, message, reducedMotion = false, onClose }) {
   const replay = () => {
     if (isMessageStage) {
       clearRevealTimers();
+      clearLetterTimers();
       setManualSection(null);
+      setLetterPhase('letterOne');
+      setSecondVisibleCount(0);
       setReplayKey((key) => key + 1);
     }
   };
@@ -234,7 +367,7 @@ function SecretRevealScene({ stage, message, reducedMotion = false, onClose }) {
                 <button className="secret-reveal-button" type="button" onClick={replay}>
                   Replay
                 </button>
-                {!isComplete ? (
+                {isLetterOneVisible && !isComplete ? (
                   <button className="secret-reveal-button" type="button" onClick={showFullMessage}>
                     Show full message
                   </button>
@@ -256,9 +389,9 @@ function SecretRevealScene({ stage, message, reducedMotion = false, onClose }) {
             </motion.p>
           ) : null}
 
-          {isMessageStage ? (
+          {isLetterOneVisible ? (
             <motion.div
-              className="secret-air-panel"
+              className={`secret-air-panel ${letterPhase === 'letterOneClosing' ? 'letter-one-closing' : ''}`}
               initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 18, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: reducedMotion ? 0.01 : 0.55, ease: 'easeOut' }}
@@ -327,6 +460,51 @@ function SecretRevealScene({ stage, message, reducedMotion = false, onClose }) {
                   </button>
                 </div>
               ) : null}
+            </motion.div>
+          ) : null}
+
+          {isSecondLetterVisible ? (
+            <motion.div
+              className="second-letter-stage"
+              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 18, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: reducedMotion ? 0.01 : 0.72, ease: 'easeOut' }}
+            >
+              <motion.article
+                className={`second-letter-panel ${letterPhase === 'letterTwoBurning' ? 'burning' : ''}`}
+                initial={reducedMotion ? { opacity: 0 } : { opacity: 0, rotateX: -8, y: 18 }}
+                animate={{ opacity: 1, rotateX: 0, y: 0 }}
+                transition={{ duration: reducedMotion ? 0.01 : 0.82, ease: 'easeOut' }}
+              >
+                <span className="second-letter-seal" aria-hidden="true">II</span>
+                <p className="second-letter-kicker">One more letter...</p>
+                <h2>I owe you this apology</h2>
+                <div className="second-letter-rule" aria-hidden="true" />
+                <div className="second-letter-copy">
+                  {secondVisibleLines.length ? (
+                    secondVisibleLines.map((line, index) => (
+                      <motion.p
+                        key={`${replayKey}-second-${index}-${line}`}
+                        initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: reducedMotion ? 0.01 : LINE_FADE_DURATION_MS / 1000,
+                          ease: 'easeOut',
+                        }}
+                      >
+                        {line}
+                      </motion.p>
+                    ))
+                  ) : (
+                    <span className="second-letter-loading" aria-hidden="true" />
+                  )}
+                </div>
+                <div className="second-letter-embers" aria-hidden="true">
+                  {Array.from({ length: 18 }, (_, index) => (
+                    <span key={index} style={{ '--i': index }} />
+                  ))}
+                </div>
+              </motion.article>
             </motion.div>
           ) : null}
         </motion.section>
